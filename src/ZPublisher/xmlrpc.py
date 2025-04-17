@@ -40,6 +40,10 @@ except ImportError:
 # Make DateTime.DateTime marshallable via XML-RPC
 WRAPPERS = xmlrpclib.WRAPPERS + (DateTime, )
 
+def dump_nil (self, value, write):
+    if not self.allow_none:
+        raise TypeError, "cannot marshal None unless allow_none is enabled"
+    write("<value><string></string></value>")
 
 def dump_instance(self, value, write):
     # Check for special wrappers
@@ -70,6 +74,7 @@ def dump_instance(self, value, write):
 
 # Override the standard marshaller for object instances
 # to skip private attributes.
+from types import NoneType
 try:
     from types import InstanceType
     xmlrpclib.Marshaller.dispatch[InstanceType] = dump_instance  # py2
@@ -77,6 +82,7 @@ except ImportError:
     xmlrpclib.Marshaller.dispatch['_arbitrary_instance'] = dump_instance  # py3
 
 xmlrpclib.Marshaller.dispatch[DateTime] = dump_instance
+xmlrpclib.Marshaller.dispatch[NoneType] = dump_nil
 
 
 def parse_input(data):
