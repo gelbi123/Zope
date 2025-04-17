@@ -39,6 +39,9 @@ try:
 except ImportError:
     import threading as thread
 
+# to use zope_default_encoding in zope.conf
+from ZPublisher.HTTPResponse import default_encoding
+
 import logging
 import logging.handlers
 logger = logging.getLogger('event.xmlrpc')
@@ -231,11 +234,15 @@ class Response(object):
         return delattr(self._real, name)
 
     def setBody(self, body, title='', is_error=0, bogus_str_search=None):
+        # xmlrpclib.dumps should use the encoding which is defined
+        # in zope.conf. now the encoding is under our control
+        encoding=default_encoding
         if isinstance(body, xmlrpclib.Fault):
             txt = str(body)
             log_exception(self, txt)
             # Convert Fault object to XML-RPC response.
-            body = xmlrpclib.dumps(body, methodresponse=1, allow_none=True)
+            body = xmlrpclib.dumps(body, methodresponse=1, allow_none=True,
+                                    encoding=encoding)
         else:
             # Marshall our body as an XML-RPC response. Strings will be sent
             # strings, integers as integers, etc. We do *not* convert
@@ -248,7 +255,8 @@ class Response(object):
                 if len(ret) > 80:
                     ret = ret[:80] + '...'
                 body = xmlrpclib.dumps(
-                    (body,), methodresponse=1, allow_none=True)
+                    (body,), methodresponse=1, allow_none=True,
+                    encoding=encoding)
                 log_ok(self, ret)
             except ConflictError:
                 raise
@@ -257,7 +265,9 @@ class Response(object):
                 return
         # Set our body to the XML-RPC message, and fix our MIME type.
         self._real.setBody(body)
-        self._real.setHeader('content-type', 'text/xml')
+        # rfc3023 STRONGLY recomends setting the optional charset
+        self._real.setHeader(
+                    'content-type', 'text/xml; charset=%s' % (encoding,))
         return self
 
     def exception(self, fatal=0, info=None,
