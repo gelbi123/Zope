@@ -63,7 +63,7 @@ class XMLRPCResponseTests(unittest.TestCase):
         response = self._makeOne(faux)
         response.setBody(body)
         data, method = xmlrpclib.loads(faux._body)
-        self.assertIs(data[0]['public'], None)
+        self.assertIs(data[0]['public'], '')
 
     def test_instance(self):
         # Instances are turned into dicts with their private
