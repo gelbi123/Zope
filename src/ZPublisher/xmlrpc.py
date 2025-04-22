@@ -40,6 +40,39 @@ except ImportError:
 # Make DateTime.DateTime marshallable via XML-RPC
 WRAPPERS = xmlrpclib.WRAPPERS + (DateTime, )
 
+# Monkey-patch xmlrpclib: remove illegal XML (control) characters
+# See: http://www.w3.org/TR/xml/#charsets
+
+re_fcc = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+def dump_string(self, value, write, escape=xmlrpclib.escape,
+                re_fcc=re_fcc, logger=None):
+    def _format_error_message(value, mo):
+        pos = mo.start()
+        inv = value[pos]
+        i1 = max(0, pos-10)
+        i2 = min(len(value), pos+10)
+        ctx = value[i1:i2]
+        if len(value) > 10:
+            if i1 > 0:
+                ctx = '...' + ctx
+            if i2 < len(value) - 1:
+                ctx = ctx + '...'
+        em = '%s (in %s)' % (repr(inv),repr(ctx))
+        return em
+
+    # find and delete illegal XML chars
+    mo = re_fcc.search(value)
+    if mo:
+        # match: log warning if logger is given
+        if logger:
+            em = _format_error_message(value, mo)
+            logger.warning('xmlrpc: invalid XML char: %s' % em)
+        # ...but delete (and ignore) forbidden chars
+        value = re_fcc.sub('', value)
+    write("<value><string>")
+    write(escape(value))
+    write("</string></value>\n")
 
 def dump_instance(self, value, write):
     # Check for special wrappers
@@ -71,10 +104,12 @@ def dump_instance(self, value, write):
 # Override the standard marshaller for object instances
 # to skip private attributes.
 try:
-    from types import InstanceType
+    from types import InstanceType, StringType
     xmlrpclib.Marshaller.dispatch[InstanceType] = dump_instance  # py2
+    xmlrpclib.Marshaller.dispatch[StringType] = dump_string
 except ImportError:
     xmlrpclib.Marshaller.dispatch['_arbitrary_instance'] = dump_instance  # py3
+    xmlrpclib.Marshaller.dispatch[str] = dump_string
 
 xmlrpclib.Marshaller.dispatch[DateTime] = dump_instance
 

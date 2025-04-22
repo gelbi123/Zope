@@ -65,6 +65,18 @@ class XMLRPCResponseTests(unittest.TestCase):
         data, method = xmlrpclib.loads(faux._body)
         self.assertIs(data[0]['public'], None)
 
+    def test_rmv_illegal_xml_chars(self):
+        ctrl_chars1 = ''.join([chr(i) for i in range(0x09)])
+        ctrl_chars2 = ''.join(['\x0b', '\x0c'])
+        ctrl_chars3 = ''.join([chr(i) for i in range(0x0e, 0x20)])
+        value = ''.join((ctrl_chars1, ctrl_chars2, ctrl_chars3))
+        body = FauxInstance(public=value)
+        faux = FauxResponse()
+        response = self._makeOne(faux)
+        response.setBody(body)
+        data, method =xmlrpclib.loads(faux._body)
+        self.assertEqual(data[0]['public'], '')
+
     def test_instance(self):
         # Instances are turned into dicts with their private
         # attributes removed.
