@@ -30,6 +30,8 @@ from ExtensionClass import Base
 from zExceptions import Unauthorized
 from ZODB.POSException import ConflictError
 
+# to use zope_default_encoding in zope.conf
+from ZPublisher.HTTPResponse import default_encoding
 
 try:
     import xmlrpc.client as xmlrpclib
