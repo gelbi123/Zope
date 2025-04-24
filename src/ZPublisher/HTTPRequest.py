@@ -16,6 +16,7 @@
 
 import codecs
 import os
+import sys
 import random
 import re
 import time
@@ -510,8 +511,30 @@ class HTTPRequest(BaseRequest):
                   and 'text/xml' in fs.headers.get('content-type', '')
                   and use_builtin_xmlrpc(self)):
                 # Ye haaa, XML-RPC!
-                meth, self.args = xmlrpc.parse_input(fs.value)
+                try:
+                    meth, self.args = xmlrpc.parse_input(fs.value)
+                except:
+                    e,v,tb = sys.exc_info()
+                    err = '%s: %s' % (e.__name__, v)
+                    fs_value = str(fs.value[:500])
+                    if fs_value > 490:
+                        fs_value = fs_value + '...'
+                    errmsg = "\n".join([
+                        "your request was specified as XML-RPC,",
+                        "but it couldn't be parsed!",
+                        "the error was: %s." % (err,),
+                        "xmlrpc request: %s" % (fs_value,),
+                        ])
+                    # we want standard xmlrpc logging, even
+                    # in case of request parse error...
+                    response=xmlrpc.response(response)
+                    xmlrpc.log_before(
+                       self, 'UnParseableRequestSeeError', response,
+                        suppress)
+                    xmlrpc.log_exception(response, errmsg)
+                    raise BadRequest(errmsg)
                 response = xmlrpc.response(response)
+                xmlrpc.log_before(self, meth, response)
                 other['RESPONSE'] = self.response = response
                 self.maybe_webdav_client = 0
             else:

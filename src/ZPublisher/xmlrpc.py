@@ -29,14 +29,79 @@ from DateTime.DateTime import DateTime
 from ExtensionClass import Base
 from zExceptions import Unauthorized
 from ZODB.POSException import ConflictError
+from zope.component import Interface
+from zope.component import queryAdapter
 
 # to use zope_default_encoding in zope.conf
 from ZPublisher.HTTPResponse import default_encoding
+import time
+#py23compat
+try:
+    import thread
+except ImportError:
+    import threading as thread
+
+import logging
+import logging.handlers
+logger = logging.getLogger('event.xmlrpc')
+logger.setLevel(logging.INFO)
+hdlr = logging.handlers.SysLogHandler('/dev/log')
+logger.addHandler(hdlr)
 
 try:
     import xmlrpc.client as xmlrpclib
 except ImportError:
     import xmlrpclib
+
+# add logging for xmlrpc
+def log_before(request, method, response):
+    # PATH_INFO, or PATH_TRANSLATED ???
+    #url = request.base + request.environ['PATH_INFO']
+    path = request.environ.get('PATH_INFO')
+    host_port = request.environ.get('HTTP_HOST')
+    user = request._authUserPW()  # returns (user,pw) tuple or None
+    if user:
+        user = user[0]
+    timestamp = time.time()
+    thid = thread.get_ident()
+    # args: hide actual value if method on blacklist; always convert to tuple
+    # if no adapter is found, only stringify args!
+    arg_suppresser = queryAdapter(
+                            request,
+                            Interface,
+                            'arg_suppresser',
+                            lambda method: request.args)
+    argstr = arg_suppresser(method)
+    idstring = 'xmlrpc id=%u:%.6f:%ld, client=%s, user=%s, inst=%s' % (
+       id(response), timestamp, thid, request._client_addr, user, host_port)
+    args = '%s' % (request.args,)
+    if len(args) > 200:   # syslog line limit: 1024
+        sargs = []
+        # XXX
+    logger.info(
+       "%s, path=%s, call=%s%s" %
+       (idstring, path, method, argstr))
+    response.xmlrpc_timestamp = timestamp
+    response.xmlrpc_idstring = idstring
+
+def get_xmlrpc_info(response):
+    ts = getattr(response, 'xmlrpc_timestamp', None)
+    if ts:
+        t = '%.2fms' % ((time.time() - ts) * 1000,)
+    else:
+        t = '-'
+    idstring = (getattr(response, 'xmlrpc_idstring', None) or
+               'xmlrpc %u' % (id(response),))
+    return idstring,t
+
+def log_ok(response, ret):
+    idstring, t = get_xmlrpc_info(response)
+    logger.info("%s, time=%s, out-ok, ret=%s" % (idstring, t, ret))
+
+def log_exception(response, errortext):
+    idstring, t = get_xmlrpc_info(response)
+    logger.info(
+        "%s, time=%s, out-error, exception=%s" % (idstring, t, errortext))
 
 
 # Make DateTime.DateTime marshallable via XML-RPC
@@ -208,6 +273,8 @@ class Response(object):
         # in zope.conf. now the encoding is under our control
         encoding=default_encoding
         if isinstance(body, xmlrpclib.Fault):
+            txt = str(body)
+            log_exception(self, txt)
             # Convert Fault object to XML-RPC response.
             body = xmlrpclib.dumps(body, methodresponse=1, allow_none=True,
                                     encoding=encoding)
@@ -219,9 +286,13 @@ class Response(object):
             # was a Python None. This is now patched in xmlrpclib to
             # allow Nones nested inside data structures too.
             try:
+                ret = '%s' % (body,)#
+                if len(ret) > 80:
+                    ret = ret[:80] + '...'
                 body = xmlrpclib.dumps(
                     (body,), methodresponse=1, allow_none=True,
                     encoding=encoding)
+                log_ok(self, ret)
             except ConflictError:
                 raise
             except Exception:
@@ -242,6 +313,9 @@ class Response(object):
             t, v, tb = info
         else:
             t, v, tb = sys.exc_info()
+
+        txt = '%s: %s' % (t, v)
+        log_exception(self, txt)
 
         # Don't mask 404 responses, as some XML-RPC libraries rely on the HTTP
         # mechanisms for detecting when authentication is required. Fixes Zope
