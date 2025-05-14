@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 </dtml-let>
 
-<title><dtml-if title_or_id><dtml-var title_or_id><dtml-else>Zope</dtml-if></title>
+<title>&dtml-HTTP_HOST;</title>
 <dtml-in css_urls>
 	<link rel="stylesheet" type="text/css" href="&dtml-BASEPATH1;&dtml-sequence-item;" />
 </dtml-in>

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <head>
-	<title>Zope on &dtml-BASE0;</title>
+	<title>&dtml-HTTP_HOST;</title>
 
 	<link rel="shortcut icon" type="image/x-icon" href="&dtml-BASEPATH1;/++resource++zmi/logo/favicon/favicon.ico" />
 	<link rel="apple-touch-icon" sizes="180x180" href="&dtml-BASEPATH1;/++resource++zmi/logo/favicon/apple-touch-icon.png" />
