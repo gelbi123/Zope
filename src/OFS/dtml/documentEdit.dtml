@@ -23,7 +23,7 @@
 			<div class="form-group">
 				<textarea id="content" data-contenttype="dtml" 
 					class="form-control zmi-code col-sm-12" name="data:text" wrap="off" 
-					rows="20"><dtml-var __str__></textarea>
+					rows="20"><dtml-var quotedHTML></textarea>
 			</div>
 		</dtml-with>
 
