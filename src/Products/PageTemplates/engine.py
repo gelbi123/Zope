@@ -418,6 +418,7 @@ class Program(object):
         template = ZtPageTemplate(
             text, filename=source_file, keep_body=True,
             expression_types=expr_types,
+            restricted_namespace=False,
             encoding='utf-8',
             extra_builtins={
                 "modules": SecureModuleImporter,
