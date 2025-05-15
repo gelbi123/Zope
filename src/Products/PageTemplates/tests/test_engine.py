@@ -107,6 +107,13 @@ class TestPatches(Sandboxed, ZopeTestCase):
         self.assertFalse(raised, 'Unauthorized exception raised')
         self.assertIn('<i>bar</i><i>bar</i><i>bar</i>', output)
 
+    def test_nometal(self):
+        from Products.PageTemplates.PageTemplateFile import PageTemplateFile
+
+        # test rendering engine for "nometal"
+        template = PageTemplateFile(os.path.join(path, "nometal.pt"))
+        template = template.__of__(self.folder)
+        self.assertIn('nometal', template())
 
 def test_suite():
     return unittest.TestSuite((
