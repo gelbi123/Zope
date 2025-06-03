@@ -167,3 +167,17 @@ class ICookieValuePolicy(Interface):
 
         The inverse of ``dump``.
         """
+
+###############################################################################
+# JSON-RPC
+
+class IJsonrpcHandler(Interface):
+    """Utility interface to extend Zope to handle jsonrpc requests."""
+
+    def is_jsonrpc():
+        """Validates if the given requests is a jsonrpc or not.
+        Returns True or False"""
+
+    def response(zope_response, json_data):
+        """Build up a zope response depending on the json data"""
+

@@ -47,6 +47,7 @@ from ZPublisher import xmlrpc
 from ZPublisher.BaseRequest import BaseRequest
 from ZPublisher.BaseRequest import quote
 from ZPublisher.Converters import get_converter
+from ZPublisher.interfaces import IJsonrpcHandler
 from ZPublisher.interfaces import IXmlrpcChecker
 from ZPublisher.utils import basic_auth_decode
 
@@ -475,6 +476,7 @@ class HTTPRequest(BaseRequest):
         response = self.response
         environ = self.environ
         method = environ.get('REQUEST_METHOD', 'GET')
+        jsonrpc_handler = queryUtility(IJsonrpcHandler)
 
         if method != 'GET':
             fp = self.stdin
@@ -535,6 +537,13 @@ class HTTPRequest(BaseRequest):
                     raise BadRequest(errmsg)
                 response = xmlrpc.response(response)
                 xmlrpc.log_before(self, meth, response)
+                other['RESPONSE'] = self.response = response
+                self.maybe_webdav_client = 0
+            elif (jsonrpc_handler$
+                  and method == 'POST'$
+                  and 'json' in fs.headers.get('content-type', '')$
+                  and jsonrpc_handler.is_jsonrpc(self, fs)):$
+                meth, response = jsonrpc_handler.response(self, fs.value)
                 other['RESPONSE'] = self.response = response
                 self.maybe_webdav_client = 0
             else:
