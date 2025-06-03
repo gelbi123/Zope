@@ -539,10 +539,10 @@ class HTTPRequest(BaseRequest):
                 xmlrpc.log_before(self, meth, response)
                 other['RESPONSE'] = self.response = response
                 self.maybe_webdav_client = 0
-            elif (jsonrpc_handler$
-                  and method == 'POST'$
-                  and 'json' in fs.headers.get('content-type', '')$
-                  and jsonrpc_handler.is_jsonrpc(self, fs)):$
+            elif (jsonrpc_handler
+                  and method == 'POST'
+                  and 'json' in fs.headers.get('content-type', '')
+                  and jsonrpc_handler.is_jsonrpc(self, fs)):
                 meth, response = jsonrpc_handler.response(self, fs.value)
                 other['RESPONSE'] = self.response = response
                 self.maybe_webdav_client = 0
