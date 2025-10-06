@@ -174,6 +174,12 @@ class Traversable(object):
         if isinstance(path, str):
             # Only native strings are allowed
             path = path.split('/')
+        elif isinstance(path, type(u'')):
+            try:
+                # ASCII-only unicode paths are ok
+                path = path.encode('ascii').split('/')
+            except UnicodeError:
+                raise AssertionError('unicode paths must be ASCII: %r' % path)
         else:
             path = list(path)
 
