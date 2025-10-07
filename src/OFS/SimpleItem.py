@@ -259,6 +259,7 @@ class Item(
             else:
                 error_name = 'Unknown'
 
+            s = None # make sure to avoid name error when logging
             if not error_message:
                 try:
                     s = ustr(error_value)
@@ -299,21 +300,63 @@ class Item(
                 else:
                     v = HTML.__call__(s, client, REQUEST, **kwargs)
             except Exception:
-                logger.error(
-                    'Exception while rendering an error message',
-                    exc_info=True
-                )
+                # rendering of error message failed
                 try:
-                    strv = repr(error_value)  # quotes tainted strings
+                    # log warning
+                    logger.warn(
+                        'Exception while rendering an error message %s (%r;%r)',
+                        sys.exc_info()[1], REQUEST, s, exc_info=False
+                        )
+                    # ...and also log original exception
+                    try:
+                        # special case Unauthorized: log only as warning,
+                        # do not include traceback
+                        # NOTE: kwargs['error_type'] is actually `error_name`
+                        #       (see comments above)
+                        if kwargs['error_type'] == 'Unauthorized':
+                            logger.warning('Original exception was (%r):',
+                                REQUEST,
+                                exc_info=(kwargs['error_type'],
+                                          kwargs['error_value'],
+                                          None)
+                                )
+                        # all other exceptions: log full traceback as error
+                        else:
+                            logger.error('Original exception was (%r):',
+                                REQUEST,
+                                exc_info=(kwargs['error_type'],
+                                          kwargs['error_value'],
+                                          tb)
+                                )
+                    except:
+                        pass # ignore errors while trying to log
+
+                    # retry with `standard_error_message` in root folder
+                    s = self.unrestrictedTraverse('/standard_error_message')
+                    #
+                    if getattr(aq_base(s), 'isDocTemp', 0):
+                        v = s(client, REQUEST, **kwargs)
+                    elif callable(s):
+                        v = s(**kwargs)
+                    else:
+                        v = HTML.__call__(s, client, REQUEST, **kwargs)
                 except Exception:
-                    strv = ('<unprintable %s object>' %
-                            str(type(error_value).__name__))
-                v = strv + (
-                    (" (Also, the following error occurred while attempting "
-                     "to render the standard error message, please see the "
-                     "event log for full details: %s)") % (
+                    # retry also failed: log error
+                    logger.error(
+                        'Exception while rendering an error message (%r;%r)',
+                        REQUEST, s, exc_info=True
+                        )
+                    try:
+                        strv = repr(error_value) # quotes tainted strings
+                    except:
+                        strv = ('<unprintable %s object>' %
+                                str(type(error_value).__name__))
+                    v = strv + (
+                        (" (Also, the following error occurred while attempting "
+                         "to render the standard error message, please see the "
+                         "event log for full details: %s)")%(
                         html_quote(sys.exc_info()[1]),
-                    ))
+                        ))
 
             # If we've been asked to handle errors, just return the rendered
             # exception and let the ZPublisher Exception Hook deal with it.
