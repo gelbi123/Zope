@@ -169,3 +169,32 @@ class TestSimpleItem(unittest.TestCase):
                                             REQUEST=REQUEST())
 
         self.assertEqual(sem.kw.get('error_type'), 'BadRequest')
+
+    def test_sem_suppress_error_val_NotFound(self):
+        # sem := standard_error_message
+        from zExceptions import NotFound
+
+        class REQUEST(object):
+            class RESPONSE(object):
+                handle_errors = True
+
+        item = self._makeOne()
+
+        class StandardErrorMessage(object):
+            def __init__(self):
+                self.kw = {}
+
+            def __call__(self, **kw):
+                self.kw.clear()
+                self.kw.update(kw)
+
+        item = self._makeOne()
+        item.standard_error_message = sem = StandardErrorMessage()
+
+        try:
+            raise NotFound('xyz')
+        except Exception:
+            item.raise_standardErrorMessage(client=item,
+                                            REQUEST=REQUEST())
+
+        self.assertFalse(sem.kw['error_tb'].find('xyz') > -1)

@@ -62,6 +62,7 @@ from OFS.role import RoleManager
 from OFS.Traversable import Traversable
 from Persistence import Persistent
 from webdav.Resource import Resource
+from zExceptions import NotFound
 from zExceptions import Redirect
 from zExceptions.ExceptionFormatter import format_exception
 from zope.interface import implementer
@@ -70,6 +71,8 @@ from ZPublisher.HTTPRequest import default_encoding
 
 logger = logging.getLogger()
 
+# special handling for preformatted (html) exceptions
+PREFORMATTED_EXCEPTIONS = [NotFound]
 
 class PathReprProvider(Base):
     """Provides a representation that includes the physical path.
@@ -525,6 +528,9 @@ class Item_w__name__(Item):
 
 
 def pretty_tb(t, v, tb, as_html=1):
+    # avoid printout
+    if t in PREFORMATTED_EXCEPTIONS:
+        v = ''
     tb = format_exception(t, v, tb, as_html=as_html)
     tb = '\n'.join(tb)
     return tb
