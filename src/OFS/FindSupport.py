@@ -126,6 +126,9 @@ class FindSupport(Base):
                 dflag = 1
 
             bs = aq_base(ob)
+            # XXX ignore broken objects
+            if bs.__name__ == 'broken object':
+                continue
             if obj_searchterm:
                 if isinstance(obj_searchterm, TaintedString):
                     obj_searchterm = str(obj_searchterm)
